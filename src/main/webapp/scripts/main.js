@@ -1,4 +1,3 @@
-
 // API endpoints
 const API_ENDPOINTS = {
     GET_RIDDLES: '/api/riddles',
@@ -15,6 +14,12 @@ const STORAGE_KEYS = {
     RIDDLES: 'enigma_quest_riddles'
 };
 
+// Game configuration
+const GAME_CONFIG = {
+    RIDDLE_TIME_LIMIT: 30, // 30 seconds per riddle
+    MAX_HINTS_PER_RIDDLE: 3 // Maximum 3 hints per riddle
+};
+
 // Riddle database - will be fetched from API
 let riddles = [];
 
@@ -23,11 +28,15 @@ let currentRiddleIndex = 0;
 let correctAnswers = 0;
 let currentStreak = 0;
 let hintsUsed = 0;
+let hintsUsedForCurrentRiddle = 0;
 let startTime;
+let riddleStartTime;
 let timerInterval;
+let riddleTimerInterval;
 let gameEnded = false;
 let userId = null;
 let totalRiddles = 0;
+let timeRemaining = GAME_CONFIG.RIDDLE_TIME_LIMIT;
 
 // DOM Elements
 const riddleElement = document.getElementById('riddle');
@@ -261,6 +270,14 @@ function loadRiddle(index) {
         return;
     }
 
+    // Reset riddle-specific variables
+    hintsUsedForCurrentRiddle = 0;
+    timeRemaining = GAME_CONFIG.RIDDLE_TIME_LIMIT;
+
+    // Enable hint button
+    hintBtn.disabled = false;
+    hintBtn.textContent = "Show Hint";
+
     // Store current riddle index in local storage
     localStorage.setItem(STORAGE_KEYS.CURRENT_RIDDLE, index);
 
@@ -269,57 +286,81 @@ function loadRiddle(index) {
     hintElement.style.display = 'none';
     answerInput.value = '';
     answerInput.focus();
+
+    // Start riddle timer
+    riddleStartTime = new Date();
+    clearInterval(riddleTimerInterval);
+    riddleTimerInterval = setInterval(updateRiddleTimer, 1000);
+
+    // Update time display immediately
+    updateRiddleTimerDisplay();
 }
 
-// Check answer
-// async function checkAnswer() {
-//     const userAnswer = answerInput.value.trim();
-//     if (!userAnswer) return;
-//
-//     // Disable input while checking
-//     answerInput.disabled = true;
-//     submitBtn.disabled = true;
-//
-//     try {
-//         // Send answer to API for validation
-//         const riddleId = riddles[currentRiddleIndex].id;
-//         const result = await submitAnswerToAPI(riddleId, userAnswer);
-//
-//         if (result.correct) {
-//             showFeedback(true);
-//             correctAnswers++;
-//             currentStreak++;
-//         } else {
-//             showFeedback(false, result.correctAnswer);
-//             currentStreak = 0;
-//         }
-//
-//         // Update stats locally and on server
-//         updateStats();
-//         await updateUserStats();
-//
-//         nextBtn.style.display = 'block';
-//
-//     } catch (error) {
-//         console.error("Error checking answer:", error);
-//
-//         // Fallback to client-side checking if API fails
-//         const correctAnswer = riddles[currentRiddleIndex].answer.toLowerCase();
-//         if (userAnswer.toLowerCase() === correctAnswer) {
-//             showFeedback(true);
-//             correctAnswers++;
-//             currentStreak++;
-//         } else {
-//             showFeedback(false, riddles[currentRiddleIndex].answer);
-//             currentStreak = 0;
-//         }
-//
-//         updateStats();
-//         saveLocalStats();
-//
-//         nextBtn.style.display = 'block';
-//     }
-// }
+// Update the riddle timer
+function updateRiddleTimer() {
+    if (gameEnded) {
+        clearInterval(riddleTimerInterval);
+        return;
+    }
+
+    const elapsedSeconds = Math.floor((new Date() - riddleStartTime) / 1000);
+    timeRemaining = Math.max(0, GAME_CONFIG.RIDDLE_TIME_LIMIT - elapsedSeconds);
+
+    updateRiddleTimerDisplay();
+
+    if (timeRemaining <= 0) {
+        // Time's up
+        clearInterval(riddleTimerInterval);
+        handleTimeUp();
+    }
+}
+
+// Update the timer display
+function updateRiddleTimerDisplay() {
+    // Add a timer display element to the riddle container if it doesn't exist
+    let timerElement = document.getElementById('riddle-timer');
+    if (!timerElement) {
+        timerElement = document.createElement('div');
+        timerElement.id = 'riddle-timer';
+        timerElement.style.textAlign = 'center';
+        timerElement.style.marginTop = '10px';
+        timerElement.style.fontWeight = 'bold';
+        timerElement.style.fontSize = '1.2rem';
+
+        // Insert after riddle text
+        riddleElement.parentNode.insertBefore(timerElement, riddleElement.nextSibling);
+    }
+
+    // Change color based on time remaining
+    if (timeRemaining <= 5) {
+        timerElement.style.color = 'var(--danger)';
+    } else if (timeRemaining <= 10) {
+        timerElement.style.color = 'var(--warning)';
+    } else {
+        timerElement.style.color = 'var(--light)';
+    }
+
+    timerElement.textContent = `Time remaining: ${timeRemaining} seconds`;
+}
+
+// Handle when time is up for a riddle
+function handleTimeUp() {
+    // Disable input
+    answerInput.disabled = true;
+    submitBtn.disabled = true;
+    hintBtn.disabled = true;
+
+    // Show the correct answer
+    showFeedback(false, riddles[currentRiddleIndex].answer);
+
+    // Show next button
+    nextBtn.style.display = 'block';
+
+    // Reset streak
+    currentStreak = 0;
+    updateStats();
+}
+
 // Function to validate the answer input
 function validateAnswer() {
     const inputGroup = document.querySelector('.input-group');
@@ -335,7 +376,7 @@ function validateAnswer() {
     }
 }
 
-// Modified check answer function
+// Check answer
 async function checkAnswer() {
     // Validate the input first
     if (!validateAnswer()) {
@@ -344,34 +385,53 @@ async function checkAnswer() {
 
     const userAnswer = answerInput.value.trim();
 
-    // Rest of your existing function continues here...
     // Disable input while checking
     answerInput.disabled = true;
     submitBtn.disabled = true;
 
-    // ... (your existing code)
-}
+    try {
+        // Stop the riddle timer
+        clearInterval(riddleTimerInterval);
 
-// Additional event listener for input to clear error on typing
-answerInput.addEventListener('input', function() {
-    const inputGroup = document.querySelector('.input-group');
-    inputGroup.classList.remove('error');
-});
+        // Send answer to API for validation
+        const riddleId = riddles[currentRiddleIndex].id;
+        const result = await submitAnswerToAPI(riddleId, userAnswer);
 
-// Update existing event listeners
-submitBtn.addEventListener('click', function() {
-    if (validateAnswer()) {
-        checkAnswer();
-    }
-});
-
-answerInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        if (validateAnswer()) {
-            checkAnswer();
+        if (result.correct) {
+            showFeedback(true);
+            correctAnswers++;
+            currentStreak++;
+        } else {
+            showFeedback(false, result.correctAnswer);
+            currentStreak = 0;
         }
+
+        // Update stats locally and on server
+        updateStats();
+        await updateUserStats();
+
+        nextBtn.style.display = 'block';
+
+    } catch (error) {
+        console.error("Error checking answer:", error);
+
+        // Fallback to client-side checking if API fails
+        const correctAnswer = riddles[currentRiddleIndex].answer.toLowerCase();
+        if (userAnswer.toLowerCase() === correctAnswer) {
+            showFeedback(true);
+            correctAnswers++;
+            currentStreak++;
+        } else {
+            showFeedback(false, riddles[currentRiddleIndex].answer);
+            currentStreak = 0;
+        }
+
+        updateStats();
+        saveLocalStats();
+
+        nextBtn.style.display = 'block';
     }
-});
+}
 
 // Show feedback to user
 function showFeedback(isCorrect, correctAnswer = null) {
@@ -441,6 +501,7 @@ function updateTimer() {
 async function endGame() {
     gameEnded = true;
     clearInterval(timerInterval);
+    clearInterval(riddleTimerInterval);
 
     // Calculate score and time
     const accuracy = Math.round((correctAnswers / totalRiddles) * 100);
@@ -480,7 +541,7 @@ async function endGame() {
 
     // Hide other game elements
     riddleElement.parentElement.style.display = 'none';
-    answerInput.parentElement.style.display = 'none';
+    answerInput.parentElement.parentElement.style.display = 'none';
     feedbackElement.style.display = 'none';
     document.querySelector('.controls').style.display = 'none';
 
@@ -497,10 +558,33 @@ answerInput.addEventListener('keypress', function(e) {
     }
 });
 
+// Additional event listener for input to clear error on typing
+answerInput.addEventListener('input', function() {
+    const inputGroup = document.querySelector('.input-group');
+    inputGroup.classList.remove('error');
+});
+
 hintBtn.addEventListener('click', async function() {
-    hintElement.style.display = 'block';
+    if (hintsUsedForCurrentRiddle >= GAME_CONFIG.MAX_HINTS_PER_RIDDLE) {
+        // Already used max hints for this riddle
+        return;
+    }
+
+    hintsUsedForCurrentRiddle++;
     hintsUsed++;
+
+    hintElement.style.display = 'block';
     updateStats();
+
+    // Update hint button text to show remaining hints
+    const remainingHints = GAME_CONFIG.MAX_HINTS_PER_RIDDLE - hintsUsedForCurrentRiddle;
+    hintBtn.textContent = `Hints: ${remainingHints} left`;
+
+    // Disable hint button if no more hints available
+    if (remainingHints <= 0) {
+        hintBtn.disabled = true;
+    }
+
     await updateUserStats(); // Update server with hint usage
 });
 
@@ -510,7 +594,7 @@ restartBtn.addEventListener('click', initGame);
 
 restartBtnFinal.addEventListener('click', function() {
     riddleElement.parentElement.style.display = 'block';
-    answerInput.parentElement.style.display = 'flex';
+    answerInput.parentElement.parentElement.style.display = 'flex';
     document.querySelector('.controls').style.display = 'flex';
     initGame();
 });
