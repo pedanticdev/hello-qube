@@ -73,7 +73,6 @@ function loadLocalStats() {
         const stats = JSON.parse(statsJson);
         correctAnswers = stats.correctAnswers || 0;
         currentStreak = stats.currentStreak || 0;
-        hintsUsed = stats.hintsUsed || 0;
         currentRiddleIndex = stats.currentRiddleIndex || 0;
         return stats;
     }
@@ -86,7 +85,6 @@ function saveLocalStats() {
         userId: userId,
         correctAnswers: correctAnswers,
         currentStreak: currentStreak,
-        hintsUsed: hintsUsed,
         currentRiddleIndex: currentRiddleIndex,
         lastUpdated: new Date().toISOString()
     };
@@ -177,7 +175,6 @@ async function submitAnswerToAPI(riddleId, userAnswer) {
             riddleId: riddleId,
             answer: userAnswer,
             timeSpent: Math.floor((new Date() - startTime) / 1000),
-            hintsUsed: hintsUsed
         };
 
         const response = await fetch(API_ENDPOINTS.SUBMIT_ANSWER, {
@@ -271,12 +268,12 @@ function loadRiddle(index) {
     }
 
     // Reset riddle-specific variables
-    hintsUsedForCurrentRiddle = 0;
+    hintsUsedForCurrentRiddle = 0;  // Reset hint count for this riddle
     timeRemaining = GAME_CONFIG.RIDDLE_TIME_LIMIT;
 
-    // Enable hint button
+    // Reset and enable hint button
     hintBtn.disabled = false;
-    hintBtn.textContent = "Show Hint";
+    hintBtn.textContent = `Hint (${GAME_CONFIG.MAX_HINTS_PER_RIDDLE} available)`;
 
     // Store current riddle index in local storage
     localStorage.setItem(STORAGE_KEYS.CURRENT_RIDDLE, index);
@@ -459,7 +456,7 @@ async function nextRiddle() {
     nextBtn.style.display = 'none';
     answerInput.disabled = false;
     submitBtn.disabled = false;
-
+    hintsUsed = 0;
     // Hide hint for new riddle
     hintElement.style.display = 'none';
 
@@ -529,7 +526,6 @@ async function endGame() {
     let summaryHTML = `
                 <p>You solved ${correctAnswers} out of ${totalRiddles} riddles</p>
                 <p>Accuracy: ${accuracy}%</p>
-                <p>Hints used: ${hintsUsed}</p>
                 <p>Time taken: ${minutes}m ${seconds}s</p>
             `;
 
@@ -578,7 +574,7 @@ hintBtn.addEventListener('click', async function() {
 
     // Update hint button text to show remaining hints
     const remainingHints = GAME_CONFIG.MAX_HINTS_PER_RIDDLE - hintsUsedForCurrentRiddle;
-    hintBtn.textContent = `Hints: ${remainingHints} left`;
+    hintBtn.textContent = `Hint (${remainingHints} left)`;
 
     // Disable hint button if no more hints available
     if (remainingHints <= 0) {
