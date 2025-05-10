@@ -106,7 +106,7 @@ async function fetchRiddles() {
         }
 
         // If not in cache, fetch from API
-        const response = await fetch(API_ENDPOINTS.GET_RIDDLES);
+        const response = await fetch(`${API_ENDPOINTS.GET_RIDDLES}/${userId}`);
         if (!response.ok) {
             throw new Error('Failed to fetch riddles');
         }
@@ -128,7 +128,7 @@ async function fetchRiddles() {
 // Fetch user stats from API
 async function fetchUserStats() {
     try {
-        const response = await fetch(`${API_ENDPOINTS.GET_STATS}?userId=${userId}`);
+        const response = await fetch(`${API_ENDPOINTS.GET_STATS}/${userId}`);
         if (!response.ok) {
             throw new Error('Failed to fetch user stats');
         }

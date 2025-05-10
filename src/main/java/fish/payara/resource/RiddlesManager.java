@@ -1,5 +1,6 @@
 package fish.payara.resource;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.util.TypeLiteral;
 import jakarta.inject.Inject;
@@ -13,16 +14,26 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @ApplicationScoped
 public class RiddlesManager {
-    public static final ConcurrentHashMap<String, Set<Riddle>> RIDDLE_MAP = new ConcurrentHashMap<>();
+
+    public static final ConcurrentHashMap<String, RiddleCacheWrapper> RIDDLE_MAP = new ConcurrentHashMap<>();
+
     private static final Logger LOG = Logger.getLogger(RiddlesManager.class.getName());
+
+    private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
     @Inject
     @ConfigProperty(name = "open.ai.key")
     private String openAiKey;
@@ -30,13 +41,18 @@ public class RiddlesManager {
     @ConfigProperty(name = "api.url", defaultValue = "https://api.openai.com/v1/chat/completions")
     private String apiUrl;
 
+    @PostConstruct
+    void init() {
+        scheduler.scheduleAtFixedRate(this::cleanUpCache, 5, 5, TimeUnit.MINUTES);
+    }
+
     public RiddleResponse fetchRiddles(@NotNull String userId) {
-        Set<Riddle> riddles = RIDDLE_MAP.get(userId);
-        if (!riddles.isEmpty()) {
-            return new RiddleResponse(riddles);
+        RiddleCacheWrapper wrapper = RIDDLE_MAP.get(userId);
+        if (wrapper != null) {
+            return new RiddleResponse(wrapper.riddles());
         }
-        riddles = Set.copyOf(fetchRiddles());
-        RIDDLE_MAP.put(userId, riddles);
+        var riddles = Set.copyOf(fetchRiddles());
+        RIDDLE_MAP.put(userId, new RiddleCacheWrapper(riddles, Instant.now()));
         return new RiddleResponse(riddles);
 
     }
@@ -68,4 +84,12 @@ public class RiddlesManager {
         return List.of();
     }
 
+    private void cleanUpCache() {
+        Instant cutoffTime = Instant.now().minus(Duration.ofMinutes(15));
+
+        RIDDLE_MAP.entrySet().removeIf(entry -> {
+            RiddleCacheWrapper wrapper = entry.getValue();
+            return wrapper.lastUpdated().isBefore(cutoffTime);
+        });
+    }
 }
