@@ -1,7 +1,7 @@
 // API endpoints
 const API_ENDPOINTS = {
     GET_RIDDLES: '/api/riddles',
-    SUBMIT_ANSWER: '/api/submit',
+    SUBMIT_ANSWER: '/api/riddles/submit',
     GET_STATS: '/api/stats',
     UPDATE_STATS: '/api/stats/update',
 };
