@@ -37,7 +37,8 @@ let gameEnded = false;
 let userId = null;
 let totalRiddles = 0;
 let timeRemaining = GAME_CONFIG.RIDDLE_TIME_LIMIT;
-
+let currentRiddleHints = [];
+let currentHintIndex = 0;
 // DOM Elements
 const riddleElement = document.getElementById('riddle');
 const hintElement = document.getElementById('hint');
@@ -97,15 +98,6 @@ async function fetchRiddles() {
     try {
         riddleElement.textContent = "Loading riddles...";
 
-        // Check local storage first
-        // const cachedRiddles = localStorage.getItem(STORAGE_KEYS.RIDDLES);
-        // if (cachedRiddles) {
-        //     riddles = JSON.parse(cachedRiddles);
-        //     totalRiddles = riddles.length;
-        //     return riddles;
-        // }
-
-        // If not in cache, fetch from API
         const response = await fetch(`${API_ENDPOINTS.GET_RIDDLES}/${userId}`);
         if (!response.ok) {
             throw new Error('Failed to fetch riddles');
@@ -113,11 +105,8 @@ async function fetchRiddles() {
 
         const data = await response.json();
         riddles = data.riddles || [];
-        console.log(riddles)
         totalRiddles = riddles.length;
 
-        // Cache the riddles
-        // localStorage.setItem(STORAGE_KEYS.RIDDLES, JSON.stringify(riddles));
         return riddles;
     } catch (error) {
         console.error("Error fetching riddles:", error);
@@ -280,7 +269,19 @@ function loadRiddle(index) {
     localStorage.setItem(STORAGE_KEYS.CURRENT_RIDDLE, index);
 
     riddleElement.textContent = riddles[index].question;
-    hintElement.textContent = riddles[index].hint;
+
+    // Check if hints is an array or a single string and handle accordingly
+    if (Array.isArray(riddles[index].hints)) {
+        // Store the hints array for later use
+        currentRiddleHints = riddles[index].hints;
+        // Start with no hint displayed
+        hintElement.textContent = '';
+    } else {
+        // For backward compatibility with old riddle format
+        hintElement.textContent = riddles[index].hint || '';
+        currentRiddleHints = [riddles[index].hint];
+    }
+
     hintElement.style.display = 'none';
     answerInput.value = '';
     answerInput.focus();
@@ -564,12 +565,22 @@ answerInput.addEventListener('input', function() {
 
 hintBtn.addEventListener('click', async function() {
     if (hintsUsedForCurrentRiddle >= GAME_CONFIG.MAX_HINTS_PER_RIDDLE) {
-        // Already used max hints for this riddle
         return;
     }
 
     hintsUsedForCurrentRiddle++;
     hintsUsed++;
+
+    if (Array.isArray(currentRiddleHints) && currentRiddleHints.length > 0) {
+        const hintIndex = hintsUsedForCurrentRiddle - 1;
+        if (hintIndex < currentRiddleHints.length) {
+            if (hintsUsedForCurrentRiddle > 1) {
+                hintElement.innerHTML += `<br><br>Hint ${hintsUsedForCurrentRiddle}: ${currentRiddleHints[hintIndex]}`;
+            } else {
+                hintElement.textContent = `Hint 1: ${currentRiddleHints[hintIndex]}`;
+            }
+        }
+    }
 
     hintElement.style.display = 'block';
     updateStats();

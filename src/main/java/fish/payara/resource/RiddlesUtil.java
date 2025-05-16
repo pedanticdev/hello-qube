@@ -1,16 +1,22 @@
 package fish.payara.resource;
 
+import jakarta.enterprise.util.TypeLiteral;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
 import jakarta.validation.constraints.NotNull;
 
+import java.io.StringReader;
 import java.lang.reflect.Type;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class RiddlesUtil {
-
+private static final Logger log = Logger.getLogger(RiddlesUtil.class.getName());
     public static final String RIDDLE_REQUEST_SYSTEM_MESSAGE = """
             
             
@@ -137,5 +143,35 @@ public class RiddlesUtil {
 
     public static String generateRequestBody() {
         return toJson(generateRiddleRequest());
+    }
+
+    private static String cleanJsonString(String jsonString) {
+        if (jsonString.startsWith("\"") && jsonString.endsWith("\"")) {
+            jsonString = jsonString.substring(1, jsonString.length() - 1).replace("\\\"", "\"");
+        }
+
+        if (jsonString.contains("```json")) {
+            // Find the actual JSON content between markers
+            int startIndex = jsonString.indexOf("[");
+            int endIndex = jsonString.lastIndexOf("]") + 1;
+
+            if (startIndex >= 0 && endIndex > startIndex) {
+                return jsonString.substring(startIndex, endIndex);
+            }
+        }
+
+        return jsonString;
+    }
+
+    public static List<Riddle> processResponse(String response) {
+        JsonObject jsonObject = Json.createReader(new StringReader(response)).readObject();
+        String content = jsonObject.getJsonArray("choices")
+                .getJsonObject(0)
+                .getJsonObject("message")
+                .getString("content");
+        log.log(Level.FINE, "Processing response: {0}", content);
+        return fromJson( cleanJsonString(content), new TypeLiteral<List<Riddle>>() {
+        }.getType());
+
     }
 }

@@ -68,7 +68,6 @@ public class RiddlesManager {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + openAiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
-        // Send request and handle response
         HttpResponse<String> response = null;
 
         try {
@@ -80,20 +79,9 @@ public class RiddlesManager {
         if (response != null && response.statusCode() == Response.Status.OK.getStatusCode()) {
             LOG.log(Level.INFO, "Response status code: {0}", response.statusCode());
             LOG.log(Level.INFO, "Response body: {0}", response.body());
-
-            JsonObject jsonObject = Json.createReader(new StringReader(response.body())).readObject();
-            String content = jsonObject.getJsonArray("choices")
-                    .getJsonObject(0)
-                    .getJsonObject("message")
-                    .getString("content");
-
-            LOG.log(Level.INFO, "Model Response: {0}", content);
-
-            String cleanedJson = cleanJsonString(content);
-            LOG.log(Level.INFO, "Cleaned JSON: {0}", cleanedJson);
-            return RiddlesUtil.fromJson(cleanedJson, new TypeLiteral<List<Riddle>>() {
-            }.getType());
-
+            List<Riddle> riddles = RiddlesUtil.processResponse(response.body());
+            LOG.log(Level.INFO, "Processed Riddles: {0}", riddles.toString());
+            return riddles;
         }
 
         return List.of();
@@ -107,22 +95,6 @@ public class RiddlesManager {
             return wrapper.lastUpdated().isBefore(cutoffTime);
         });
     }
-    private String cleanJsonString(String jsonString) {
-        if (jsonString.startsWith("\"") && jsonString.endsWith("\"")) {
-            jsonString = jsonString.substring(1, jsonString.length() - 1).replace("\\\"", "\"");
-        }
 
-        if (jsonString.contains("```json")) {
-            // Find the actual JSON content between markers
-            int startIndex = jsonString.indexOf("[");
-            int endIndex = jsonString.lastIndexOf("]") + 1;
-
-            if (startIndex >= 0 && endIndex > startIndex) {
-                return jsonString.substring(startIndex, endIndex);
-            }
-        }
-
-        return jsonString;
-    }
 
 }
