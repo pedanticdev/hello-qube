@@ -34,11 +34,18 @@
             font-weight: 900;
             text-shadow: 2px 2px 3px rgba(0, 0, 0, 0.2);
         }
+        h2 {
+            color: #0D47A1;
+            margin-top: 30px;
+            font-size: 28px;
+            font-weight: 700;
+        }
         p {
-            font-size: 20px;
+            font-size: 18px;
             line-height: 1.6;
             margin-bottom: 20px;
-            font-weight: 600;
+            font-weight: 500;
+            text-align: left;
         }
         .highlight {
             color: #F0981B;
@@ -46,15 +53,17 @@
             font-size: 26px;
             text-transform: uppercase;
             margin-top: 40px;
+            text-align: center;
         }
         .celebration {
-            font-size: 28px;
+            font-size: 24px;
             color: #F0981B;
             margin: 30px 0;
             animation: pulse 2s infinite;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 1px;
+            text-align: center;
         }
         .logo-container {
             width: 300px;
@@ -64,9 +73,58 @@
             width: 100%;
             height: auto;
         }
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin: 30px 0;
+        }
+        .feature {
+            width: 48%;
+            background-color: #f8f8f8;
+            border-left: 4px solid #F0981B;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: left;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .feature h3 {
+            color: #0D47A1;
+            margin-top: 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #F0981B;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 18px;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+        .cta-button:hover {
+            background-color: #e08b17;
+        }
+        .riddles-link {
+            display: inline-block;
+            background-color: #0D47A1;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 18px;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+        .riddles-link:hover {
+            background-color: #0a3c85;
+        }
         @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            50% { transform: scale(1.05); }
             100% { transform: scale(1); }
         }
     </style>
@@ -142,15 +200,38 @@
 
     <h1>PAYARA QUBE</h1>
 
-    <div class="celebration">✨ THIS MESSAGE SHOWS YOUR PAYARA QUBE INSTALL IS RUNNING... YAAAAAAAAAAAAAAAY! ✨</div>
+    <div class="celebration">✨ YOUR PAYARA QUBE INSTALL IS RUNNING! ✨</div>
 
-    <p>BUT WHAT IS PAYARA QUBE I HEAR YOU ASK?</p>
+    <h2>The Zero-Maintenance Java Platform</h2>
 
-    <p>PAYARA QUBE IS PAYARA'S ANSWER TO COMPANIES THAT NEED THE SIMPLICITY, POWER AND EFFICIENCY OF PAYARA CLOUD BUT WITH FULL DATA SOVEREIGNTY AND CONTROL.</p>
+    <p>Payara Qube is a zero-maintenance, unified platform for deploying Jakarta EE, Spring, or Quarkus applications on your own infrastructure with complete data sovereignty.</p>
 
-    <p>PAYARA QUBE IS AN INSTALLABLE VERSION OF PAYARA CLOUD THAT ORGANISATIONS CAN INSTALL IN THEIR OWN DATA CENTERS/INFRASTRUCTURE.</p>
+    <p>Deploy enterprise Java applications with unprecedented ease while maintaining complete control over your infrastructure, eliminating the complexity of Kubernetes setup and ongoing maintenance.</p>
 
-    <p class="highlight">COOL HUH!</p>
+    <div class="features">
+        <div class="feature">
+            <h3>Framework Agnostic</h3>
+            <p>Support for Jakarta EE, Spring, and Quarkus without compromising performance</p>
+        </div>
+        <div class="feature">
+            <h3>Zero Kubernetes Setup</h3>
+            <p>No need to hire specialized Kubernetes experts</p>
+        </div>
+        <div class="feature">
+            <h3>Data Sovereignty</h3>
+            <p>Maintain complete control over your infrastructure and data</p>
+        </div>
+        <div class="feature">
+            <h3>Integrated Monitoring</h3>
+            <p>Built-in observability with custom dashboards and alerts</p>
+        </div>
+    </div>
+
+    <p>Coming in Q2 2025, Payara Qube helps teams accelerate application modernization, reduce deployment time from hours to minutes, and free up development resources to focus on innovation rather than infrastructure management.</p>
+
+    <p class="highlight">YOUR JAVA APPS. YOUR INFRASTRUCTURE. ZERO KUBERNETES SETUP & MAINTENANCE.</p>
+
+    <a href="/riddles/riddles.html" class="riddles-link">Play Riddles Game to Learn About Payara & Java EE</a>
 </div>
 </body>
 </html>
