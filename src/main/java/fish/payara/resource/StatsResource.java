@@ -19,7 +19,7 @@ public class StatsResource {
 
     @Path("update")
     @POST
-    public Response updateStats(@NotEmpty SaveStatRequest request) {
+    public Response updateStats(SaveStatRequest request) {
         return Response.ok().build();
     }
 }

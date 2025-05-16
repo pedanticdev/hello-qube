@@ -1,9 +1,9 @@
 // API endpoints
 const API_ENDPOINTS = {
-    GET_RIDDLES: '/api/riddles',
-    SUBMIT_ANSWER: '/api/riddles/submit',
-    GET_STATS: '/api/stats',
-    UPDATE_STATS: '/api/stats/update',
+    GET_RIDDLES: '/riddles/api/riddles',
+    SUBMIT_ANSWER: '/riddles/api/riddles/submit',
+    GET_STATS: '/riddles/api/stats',
+    UPDATE_STATS: '/riddles/api/stats/update',
 };
 
 // Local storage keys
@@ -98,12 +98,12 @@ async function fetchRiddles() {
         riddleElement.textContent = "Loading riddles...";
 
         // Check local storage first
-        const cachedRiddles = localStorage.getItem(STORAGE_KEYS.RIDDLES);
-        if (cachedRiddles) {
-            riddles = JSON.parse(cachedRiddles);
-            totalRiddles = riddles.length;
-            return riddles;
-        }
+        // const cachedRiddles = localStorage.getItem(STORAGE_KEYS.RIDDLES);
+        // if (cachedRiddles) {
+        //     riddles = JSON.parse(cachedRiddles);
+        //     totalRiddles = riddles.length;
+        //     return riddles;
+        // }
 
         // If not in cache, fetch from API
         const response = await fetch(`${API_ENDPOINTS.GET_RIDDLES}/${userId}`);
@@ -113,10 +113,11 @@ async function fetchRiddles() {
 
         const data = await response.json();
         riddles = data.riddles || [];
+        console.log(riddles)
         totalRiddles = riddles.length;
 
         // Cache the riddles
-        localStorage.setItem(STORAGE_KEYS.RIDDLES, JSON.stringify(riddles));
+        // localStorage.setItem(STORAGE_KEYS.RIDDLES, JSON.stringify(riddles));
         return riddles;
     } catch (error) {
         console.error("Error fetching riddles:", error);
@@ -381,6 +382,7 @@ async function checkAnswer() {
     }
 
     const userAnswer = answerInput.value.trim();
+    const currentRiddle = riddles[currentRiddleIndex];
 
     // Disable input while checking
     answerInput.disabled = true;
@@ -390,36 +392,36 @@ async function checkAnswer() {
         // Stop the riddle timer
         clearInterval(riddleTimerInterval);
 
-        // Send answer to API for validation
-        const riddleId = riddles[currentRiddleIndex].id;
-        const result = await submitAnswerToAPI(riddleId, userAnswer);
+        // Direct comparison with the riddle object
+        const isCorrect = userAnswer.toLowerCase() === currentRiddle.answer.toLowerCase();
 
-        if (result.correct) {
+        if (isCorrect) {
             showFeedback(true);
             correctAnswers++;
             currentStreak++;
         } else {
-            showFeedback(false, result.correctAnswer);
+            showFeedback(false, currentRiddle.answer);
             currentStreak = 0;
         }
 
         // Update stats locally and on server
         updateStats();
-        await updateUserStats();
+        // await updateUserStats();
 
         nextBtn.style.display = 'block';
 
     } catch (error) {
         console.error("Error checking answer:", error);
 
-        // Fallback to client-side checking if API fails
-        const correctAnswer = riddles[currentRiddleIndex].answer.toLowerCase();
-        if (userAnswer.toLowerCase() === correctAnswer) {
+        // Even in the catch block, we can still directly compare
+        const isCorrect = userAnswer.toLowerCase() === currentRiddle.answer.toLowerCase();
+
+        if (isCorrect) {
             showFeedback(true);
             correctAnswers++;
             currentStreak++;
         } else {
-            showFeedback(false, riddles[currentRiddleIndex].answer);
+            showFeedback(false, currentRiddle.answer);
             currentStreak = 0;
         }
 
@@ -449,7 +451,7 @@ async function nextRiddle() {
     updateProgressBar();
 
     // Update stats on server before loading next riddle
-    await updateUserStats();
+    // await updateUserStats();
 
     loadRiddle(currentRiddleIndex);
     feedbackElement.style.display = 'none';
@@ -507,7 +509,7 @@ async function endGame() {
     const seconds = timeElapsed % 60;
 
     // Final stats update to server
-    await updateUserStats();
+    // await updateUserStats();
 
     // Get leaderboard position if available
     let leaderboardPosition = null;
@@ -581,7 +583,7 @@ hintBtn.addEventListener('click', async function() {
         hintBtn.disabled = true;
     }
 
-    await updateUserStats(); // Update server with hint usage
+    // await updateUserStats(); // Update server with hint usage
 });
 
 nextBtn.addEventListener('click', nextRiddle);
@@ -711,7 +713,7 @@ async function setupMockAPI() {
 }
 
 // Setup the mock API in development
-setupMockAPI();
+// setupMockAPI();
 
 // Start the game
 initGame();

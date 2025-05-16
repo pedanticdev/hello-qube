@@ -4,6 +4,8 @@ import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.util.TypeLiteral;
 import jakarta.inject.Inject;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
@@ -11,6 +13,7 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -35,7 +38,7 @@ public class RiddlesManager {
     private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     @Inject
-    @ConfigProperty(name = "open.ai.key")
+    @ConfigProperty(name = "OPEN_API_KEY")
     private String openAiKey;
     @Inject
     @ConfigProperty(name = "api.url", defaultValue = "https://api.openai.com/v1/chat/completions")
@@ -77,8 +80,20 @@ public class RiddlesManager {
         if (response != null && response.statusCode() == Response.Status.OK.getStatusCode()) {
             LOG.log(Level.INFO, "Response status code: {0}", response.statusCode());
             LOG.log(Level.INFO, "Response body: {0}", response.body());
-            return RiddlesUtil.fromJson(response.body(), new TypeLiteral<List<Riddle>>() {
+
+            JsonObject jsonObject = Json.createReader(new StringReader(response.body())).readObject();
+            String content = jsonObject.getJsonArray("choices")
+                    .getJsonObject(0)
+                    .getJsonObject("message")
+                    .getString("content");
+
+            LOG.log(Level.INFO, "Model Response: {0}", content);
+
+            String cleanedJson = cleanJsonString(content);
+            LOG.log(Level.INFO, "Cleaned JSON: {0}", cleanedJson);
+            return RiddlesUtil.fromJson(cleanedJson, new TypeLiteral<List<Riddle>>() {
             }.getType());
+
         }
 
         return List.of();
@@ -92,4 +107,22 @@ public class RiddlesManager {
             return wrapper.lastUpdated().isBefore(cutoffTime);
         });
     }
+    private String cleanJsonString(String jsonString) {
+        if (jsonString.startsWith("\"") && jsonString.endsWith("\"")) {
+            jsonString = jsonString.substring(1, jsonString.length() - 1).replace("\\\"", "\"");
+        }
+
+        if (jsonString.contains("```json")) {
+            // Find the actual JSON content between markers
+            int startIndex = jsonString.indexOf("[");
+            int endIndex = jsonString.lastIndexOf("]") + 1;
+
+            if (startIndex >= 0 && endIndex > startIndex) {
+                return jsonString.substring(startIndex, endIndex);
+            }
+        }
+
+        return jsonString;
+    }
+
 }

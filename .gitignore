@@ -25,3 +25,5 @@ jenkins_home/
 jenkins/.env
 container/
 docs/*
+
+deployments

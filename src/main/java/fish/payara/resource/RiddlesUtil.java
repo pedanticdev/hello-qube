@@ -117,6 +117,10 @@ public class RiddlesUtil {
     public static <T> List<T> fromJson(@NotNull final String json, @NotNull final Type type) {
         return JSON_BUILDER.fromJson(json, type);
     }
+    public static <T> T fromJson(@NotNull final String json, @NotNull final Class<T> type) {
+        return (T) JSON_BUILDER.fromJson(json, type);
+    }
+
 
     public static AiRiddleRequest generateRiddleRequest() {
         return new AiRiddleRequest(
